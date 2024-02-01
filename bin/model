@@ -7,6 +7,12 @@ Arguments:
 
   INPUT   Input directory with data.csv and obs.csv for an EC.
   OUTPUT  Output file (NetCDF).
+
+Examples:
+
+  Read all constraints in the directory input and write the output to data/all.nc.
+
+  bin/model input/* data/all.nc
 '''
 
 NSAMPLES = 100

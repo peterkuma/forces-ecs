@@ -31,3 +31,7 @@ Examples:
 
   bin/model input/* data/all.nc
 ```
+
+## License
+
+This software is distributed under the MIT license. See [LICENSE.md](LICENSE.md).

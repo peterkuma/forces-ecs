@@ -52,6 +52,7 @@ Arguments:
 Options:
 
   xlim: { MIN MAX }  x-axis limits.
+  ylim: { MIN MAX }  y-axis limits.
   labels: { ... }    PDF labels in the same order as INPUT.
 
 Examples:

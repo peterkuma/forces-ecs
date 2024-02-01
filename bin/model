@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+'''Run a PyMC model for multivariate emergent constraint (EC) calculation.
+
+Usage: model INPUT... OUTPUT
+
+Arguments:
+
+  INPUT   Input directory with data.csv and obs.csv for an EC.
+  OUTPUT  Output file (NetCDF).
+'''
+
+NSAMPLES = 100
+TUNE = 100
+CHAINS = 1
+CORES = 1
+
+META = {
+	'x': {
+		'.dims': ['constraint', 'model'],
+		'long_name': 'model x-axis value',
+	},
+	'y': {
+		'.dims': ['model'],
+		'long_name': 'model y-axis value',
+	},
+	'yxpu': {
+		'.dims': ['chain', 'sample', 'yx'],
+		'long_name': 'unconditional predicted y-x value',
+	},
+	'ypc': {
+		'.dims': ['chain', 'sample'],
+		'long_name': 'conditional predicted y-axis value'
+	},
+	'xo': {
+		'.dims': ['constraint'],
+		'long_name': 'observed x-axis mean',
+	},
+	'xosd': {
+		'.dims': ['constraint'],
+		'long_name': 'observed x-axis standard deviation',
+	},
+	'model': {
+		'.dims': ['model'],
+		'long_name': 'model name',
+	}
+}
+
+import sys
+import os
+import numpy as np
+import pymc as pm
+import ds_format as ds
+
+def read(dirname):
+	filename = os.path.join(dirname, 'data.csv')
+	filename_obs = os.path.join(dirname, 'obs.csv')
+	d = ds.read(filename)
+	d_obs = ds.read(filename_obs)
+	d['xo'] = d_obs['x'][0]
+	d['xosd'] = d_obs['xsd'][0]
+	return d
+
+def normalize(x, xsd, xo, xosd, y):
+	xm = np.nanmean(x, axis=1)
+	xs = np.nanstd(x, axis=1)
+	ym = np.nanmean(y)
+	ys = np.nanstd(y)
+	xn = np.full(x.shape, np.nan, np.float64)
+	xnsd = np.full(x.shape, np.nan, np.float64)
+	for i in range(x.shape[0]):
+		xn[i] = (x[i] - xm[i])/xs[i]
+		xnsd[i] = xsd[i]/xs[i]
+	xno = (xo - xm)/xs
+	xnosd = xosd/xs
+	yn = (y - ym)/ys
+	return xn, xnsd, xno, xnosd, yn, xm, xs, ym, ys
+
+def create_pm_model(x, xsd, xo, xosd, y, pred=False):
+	n, m = x.shape
+	n2 = n + 1
+	mod = pm.Model()
+	data = np.vstack([y, x]).T
+	mu0 = np.zeros(n2)
+	with mod:
+		mu = pm.Uniform('mu', lower=-10, upper=10, shape=(n2,), initval=mu0)
+		chol, corr, std = pm.LKJCholeskyCov('packed_L',
+			n=n2,
+			eta=2.,
+			sd_dist=pm.Exponential.dist(1.)
+		)
+		if pred is False:
+			yx = pm.MvNormal('yx',
+				mu=mu,
+				chol=chol,
+				observed=data,
+			)
+		else:
+			xo = pm.Normal('xo', mu=xo, sigma=xosd)
+			yx = pm.MvNormal('yx',
+				mu=mu,
+				chol=chol,
+			)
+			cov = pm.Deterministic('cov', pm.math.dot(chol, chol.T))
+			cov12 = pm.Deterministic('cov12', cov[0,1:])
+			cov22 = pm.Deterministic('cov22', cov[1:,1:])
+			cov21 = pm.Deterministic('cov21', cov[1:,0])
+			cov22inv = pm.Deterministic('cov22inv',
+				pm.math.matrix_inverse(cov22))
+			mu_y = pm.Deterministic('mu_y',
+				mu[0] + pm.math.dot(pm.math.dot(cov12, cov22inv), xo - mu[1:]))
+			cov_y = pm.Deterministic('cov_y',
+				cov[0,0] - pm.math.dot(pm.math.dot(cov12, cov22inv), cov21))
+			y = pm.Normal('y', mu=mu_y, sigma=cov_y)
+	return mod
+
+if __name__ == '__main__':
+	if len(sys.argv) < 2:
+		sys.stderr.write(sys.module[__name__].__doc__)
+		sys.exit(1)
+	input_ = sys.argv[1:-1]
+	output = sys.argv[-1]
+
+	dd = [read(dirname) for dirname in input_]
+
+	model = set()
+	for d in dd:
+		model = model | set(d['model'])
+	model = np.array(sorted(model))
+
+	n = len(dd)
+	m = len(model)
+
+	x = np.full((n, m), np.nan, np.float64)
+	xsd = np.full((n, m), np.nan, np.float64)
+	xo = np.full(n, np.nan, np.float64)
+	xosd = np.full(n, np.nan, np.float64)
+	y = np.full((n, m), np.nan, np.float64)
+
+	for i, d in enumerate(dd):
+		jj = np.searchsorted(model, d['model'])
+		x[i,jj] = d['x']
+		if 'xsd' in d:
+			xsd[i,jj] = d['xsd']
+		xo[i] = d['xo']
+		xosd[i] = d['xosd']
+		y[i, jj] = d['y']
+	y = np.round(np.nanmean(y, axis=0), 2)
+
+	xn, xnsd, xno, xnosd, yn, xm, xs, ym, ys = normalize(x, xsd, xo, xosd, y)
+
+	pm_mod = create_pm_model(xn, xnsd, xno, xnosd, yn)
+	pm_mod_pred = create_pm_model(xn, xnsd, xno, xnosd, yn, pred=True)
+
+	with pm_mod:
+		trace = pm.sample(NSAMPLES, tune=TUNE, chains=CHAINS, cores=CORES)
+
+	with pm_mod_pred:
+		pp = pm.sample_posterior_predictive(trace,
+			model=pm_mod_pred,
+			var_names=['yx', 'y'],
+			predictions=True
+		)
+		ypc = np.array(pp.predictions.y*ys + ym)
+		yxpu = np.array(pp.predictions.yx)
+		yxpu[:,:,0] = yxpu[:,:,0]*ys + ym
+		for i in range(n):
+			yxpu[:,:,(1+i)] = yxpu[:,:,(1+i)]*xs[i] + xm[i]
+
+	ds.write(output, {
+		'x': x,
+		'y': y,
+		'yxpu': yxpu,
+		'ypc': ypc,
+		'xo': xo,
+		'xosd': xosd,
+		'model': model,
+		'.': META,
+	})

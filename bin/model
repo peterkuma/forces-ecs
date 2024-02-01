@@ -12,13 +12,17 @@ Examples:
 
   Read all constraints in the directory input and write the output to data/all.nc.
 
-  bin/model input/* data/all.nc
+  bin/model input/* data/multivar.nc
+
+  Calculate univariate distributions.
+
+  parallel bin/model {} data/univar/{/}.nc ::: input/*
 '''
 
-NSAMPLES = 100
-TUNE = 100
-CHAINS = 1
-CORES = 1
+NSAMPLES = 1000
+TUNE = 1000
+CHAINS = None
+CORES = 6
 
 META = {
 	'x': {
@@ -121,7 +125,7 @@ def create_pm_model(x, xsd, xo, xosd, y, pred=False):
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		sys.stderr.write(sys.module[__name__].__doc__)
+		sys.stderr.write(sys.modules[__name__].__doc__)
 		sys.exit(1)
 	input_ = sys.argv[1:-1]
 	output = sys.argv[-1]

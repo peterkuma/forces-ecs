@@ -74,6 +74,12 @@ Arguments:
 
   INPUT   Input file - output of model (NetCDF).
   OUTPUT  Output plot (PDF).
+
+Examples:
+
+  Plot scatter plots of the multivariate simulation.
+
+  bin/plot_scatter data/multivar.nc plot/scatter.pdf
 ```
 
 ## License

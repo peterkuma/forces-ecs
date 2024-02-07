@@ -19,6 +19,7 @@ import sys
 import numpy as np
 import scipy as sp
 import pst
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import ds_format as ds
 
@@ -51,22 +52,29 @@ if __name__ == '__main__':
 	d = ds.read(input_)
 	n = ds.dim(d, 'constraint')
 
-	plt.figure(figsize=(10.7, 10))
+	fig = plt.figure(figsize=(10.7, 10))
+
+	y_mean = np.mean(d['y'])
+	y_min = np.floor(np.amin(d['y']))
+	y_max = np.ceil(np.amax(d['y']))
+
+	cmap = plt.get_cmap('bwr')
 
 	for i in range(n):
 		for j in range(i, n):
 			plt.subplot(n, n, i*n + j + 1)
+			ax = plt.gca()
 
 			if i == 0:
 				plt.text(0.5, 1.05, d['title'][j],
 					ha='center',
-					transform=plt.gca().transAxes,
+					transform=ax.transAxes,
 				)
 			if j == n - 1:
 				plt.text(1.05, 0.5, d['title'][i],
 					ha='left',
 					va='center',
-					transform=plt.gca().transAxes,
+					transform=ax.transAxes,
 					rotation=-90,
 				)
 
@@ -78,11 +86,12 @@ if __name__ == '__main__':
 				plt.plot([0, 1], [1, 0], color='#cccccc')
 				plt.xlim(0, 1)
 				plt.ylim(0, 1)
-				plt.gca().set_xticks([])
-				plt.gca().set_yticks([])
+				ax.set_xticks([])
+				ax.set_yticks([])
 				continue
 			x1 = x1[~mask]
 			x2 = x2[~mask]
+			y = d['y'][~mask]
 			kde = sp.stats.gaussian_kde(np.vstack([x1, x2]))
 			x1min = np.amin(x1)
 			x1max = np.amax(x1)
@@ -112,14 +121,27 @@ if __name__ == '__main__':
 				extent=[x2min, x2max, x1min, x1max],
 				origin='lower'
 			)
-			plt.gca().set_aspect(1.0/plt.gca().get_data_ratio())
-			plt.scatter(x2, x1, color=COLORS[0], s=15)
+			ax.set_aspect(1.0/ax.get_data_ratio())
+			idx = (y - y_min)/(y_max - y_min)
+			color = cmap(idx)
+			edgecolor = ['k' if np.abs(k - 0.5) < 0.1 else 'none' for k in idx ]
+			plt.scatter(x2, x1,
+				c=color,
+				edgecolors=edgecolor,
+				s=15,
+				linewidths=0.5,
+			)
 
 			if i == j:
 				plt.ylabel('ECS (K)')
 			else:
 				plt.ylabel(get_label(d, i))
 			plt.xlabel(get_label(d, j))
+
+	cax = fig.add_axes([0.12, .1, 0.34, 0.02])
+	norm = mpl.colors.BoundaryNorm(np.arange(y_min, y_max + .25, .25), cmap.N)
+	fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+		cax=cax, orientation='horizontal', label='ECS (K)')
 
 	plt.subplots_adjust(hspace=0.4, wspace=0.4)
 	plt.savefig(output, bbox_inches='tight')

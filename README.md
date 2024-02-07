@@ -53,13 +53,25 @@ Options:
 
   xlim: { MIN MAX }  x-axis limits.
   ylim: { MIN MAX }  y-axis limits.
-  labels: { ... }    PDF labels in the same order as INPUT.
 
 Examples:
 
   Plot probability density functions of all ECs.
 
-  bin/plot_pdf data/multivar.nc data/univar/{brient2016a,brient2016b,sherwood2014,zhai2015}.nc plot/pdfs.pdf labels: { Multivariate 'Brient et al. (2016)' 'Brient and Schneider (2016)' 'Sherwood et al. (2014)' 'Zhai et al. (2015)' }
+  bin/plot_pdf data/multivar.nc data/univar/*.nc plot/pdfs.pdf
+```
+
+### bin/plot\_scatter
+
+```
+Plot a scatter plots with model x-axis and y-axis values for all combinations of constraints and the y-axis.
+
+Usage: plot_scatter INPUT OUTPUT
+
+Arguments:
+
+  INPUT   Input file - output of model (NetCDF).
+  OUTPUT  Output plot (PDF).
 ```
 
 ## License

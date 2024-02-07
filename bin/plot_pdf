@@ -12,13 +12,12 @@ Options:
 
   xlim: { MIN MAX }  x-axis limits.
   ylim: { MIN MAX }  y-axis limits.
-  labels: { ... }    PDF labels in the same order as INPUT.
 
 Examples:
 
   Plot probability density functions of all ECs.
 
-  bin/plot_pdf data/multivar.nc data/univar/{brient2016a,brient2016b,sherwood2014,zhai2015}.nc plot/pdfs.pdf labels: { Multivariate 'Brient et al. (2016)' 'Brient and Schneider (2016)' 'Sherwood et al. (2014)' 'Zhai et al. (2015)' }
+  bin/plot_pdf data/multivar.nc data/univar/*.nc plot/pdfs.pdf
 '''
 
 import sys
@@ -31,8 +30,8 @@ from matplotlib.lines import Line2D
 import pst
 import ds_format as ds
 
-COLORS = ['#000000', '#009100', '#FFC022', '#0084C8', '#DC0000']
-MARKERS = ['o', 's', '*', '^', '<']
+COLORS = ['#000000', '#009100', '#FFC022', '#0084C8', '#DC0000', '#BA00FF']
+MARKERS = ['o', 's', '*', '^', '<', '>']
 
 mpl.rc('font', family='Open Sans', size=8)
 mpl.rc('axes', linewidth=0.3)
@@ -58,7 +57,7 @@ if __name__ == '__main__':
 	output = args[-1]
 
 	xlim = opts.get('xlim', [1, 6])
-	ylim = opts.get('ylim', [0, 0.9])
+	ylim = opts.get('ylim', [0, 1])
 
 	plt.figure(figsize=(6, 3))
 
@@ -70,7 +69,6 @@ if __name__ == '__main__':
 
 	for i, filename in enumerate(input_):
 		d = ds.read(filename)
-		name = os.path.splitext(os.path.basename(filename))[0]
 		kde = gaussian_kde(d['ypc'].flatten())
 		ymin = np.amin(d['ypc'])
 		ymax = np.amax(d['ypc'])
@@ -80,7 +78,7 @@ if __name__ == '__main__':
 		plt.plot(y, kde(y), color=col)
 		mean = np.mean(d['ypc'])
 		sd = np.std(d['ypc'])
-		suffix = '; %.1f ± %.1f' % (mean, 2*sd)
+		suffix = '; %.1f ± %.1f K' % (mean, 2*sd)
 		low = np.percentile(d['ypc'], 16)
 		high = np.percentile(d['ypc'], 84)
 		plt.plot([mean, mean], [ylim[0], kde(mean)[0]], color=col, lw=0.7)
@@ -88,7 +86,7 @@ if __name__ == '__main__':
 		#plt.plot([low, low], [ylim[0], kde(low)[0]], color=col, lw=0.7, linestyle='dashed')
 		#plt.plot([high, high], [ylim[0], kde(high)[0]], color=col, lw=0.7, linestyle='dashed')
 
-		labels += [name]
+		labels += [d['title'][0]] if len(d['title']) == 1 else ['Multivariate']
 		suffixes += [suffix]
 		colors += [col]
 		markers += [marker]

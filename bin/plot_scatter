@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+'''Plot a scatter plots with model x-axis and y-axis values for all combinations of constraints and the y-axis.
+
+Usage: plot_scatter INPUT OUTPUT
+
+Arguments:
+
+  INPUT   Input file - output of model (NetCDF).
+  OUTPUT  Output plot (PDF).
+'''
+
+import sys
+import numpy as np
+import scipy as sp
+import pst
+import matplotlib.pyplot as plt
+import ds_format as ds
+
+COLORS = ['#0084C8']
+XPDF_SIZE = 0.15
+
+def get_label(d, i):
+	label = d['label_tex'][i]
+	if label == '':
+		label = d['label'][i]
+	else:
+		label = '$%s$' % label
+	units = d['units_tex'][i]
+	if units == '':
+		units = d['units'][i]
+	else:
+		units = '$%s$' % units
+	if units != '1':
+		label += ' (%s)' % units
+	return label
+
+if __name__ == '__main__':
+	args, opts = pst.decode_argv(sys.argv, as_unicode=True)
+	if len(args) != 3:
+		sys.stderr.write(sys.modules[__name__].__doc__)
+		sys.exit(1)
+	input_ = args[1]
+	output = args[2]
+
+	d = ds.read(input_)
+	n = ds.dim(d, 'constraint')
+
+	plt.figure(figsize=(10.7, 10))
+
+	for i in range(n):
+		for j in range(i, n):
+			plt.subplot(n, n, i*n + j + 1)
+
+			if i == 0:
+				plt.text(0.5, 1.05, d['title'][j],
+					ha='center',
+					transform=plt.gca().transAxes,
+				)
+			if j == n - 1:
+				plt.text(1.05, 0.5, d['title'][i],
+					ha='left',
+					va='center',
+					transform=plt.gca().transAxes,
+					rotation=-90,
+				)
+
+			x1 = d['x'][i] if i != j else d['y']
+			x2 = d['x'][j]
+			mask = np.isnan(x1) | np.isnan(x2)
+			if np.all(mask):
+				plt.plot([0, 1], [0, 1], color='#cccccc')
+				plt.plot([0, 1], [1, 0], color='#cccccc')
+				plt.xlim(0, 1)
+				plt.ylim(0, 1)
+				plt.gca().set_xticks([])
+				plt.gca().set_yticks([])
+				continue
+			x1 = x1[~mask]
+			x2 = x2[~mask]
+			kde = sp.stats.gaussian_kde(np.vstack([x1, x2]))
+			x1min = np.amin(x1)
+			x1max = np.amax(x1)
+			x2min = np.amin(x2)
+			x2max = np.amax(x2)
+			xx1 = np.linspace(x1min, x1max, 100)
+			xx2 = np.linspace(x2min, x2max, 100)
+			xo1_pdf = sp.stats.norm.pdf(xx1, d['xo'][i], d['xosd'][i])
+			xo2_pdf = sp.stats.norm.pdf(xx2, d['xo'][j], d['xosd'][j])
+			plt.plot(
+				xx2,
+				x1min + XPDF_SIZE*xo2_pdf/np.amax(xo2_pdf)*(x1max - x1min),
+				color=COLORS[0],
+			)
+			if i != j:
+				plt.plot(
+					x2min + 0.1*xo1_pdf/np.amax(xo1_pdf)*(x2max - x2min),
+					xx1,
+					color=COLORS[0],
+				)
+
+			X1, X2 = np.mgrid[x1min:x1max:100j, x2min:x2max:100j]
+			positions = np.vstack([X1.ravel(), X2.ravel()])
+			Z = np.reshape(kde(positions).T, X1.shape)
+			plt.imshow(Z,
+				cmap=plt.cm.gray_r,
+				extent=[x2min, x2max, x1min, x1max],
+				origin='lower'
+			)
+			plt.gca().set_aspect(1.0/plt.gca().get_data_ratio())
+			plt.scatter(x2, x1, color=COLORS[0], s=15)
+
+			if i == j:
+				plt.ylabel('ECS (K)')
+			else:
+				plt.ylabel(get_label(d, i))
+			plt.xlabel(get_label(d, j))
+
+	plt.subplots_adjust(hspace=0.4, wspace=0.4)
+	plt.savefig(output, bbox_inches='tight')

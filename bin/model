@@ -21,8 +21,12 @@ Examples:
 
 NSAMPLES = 1000
 TUNE = 1000
+#NSAMPLES = 10
+#TUNE = 10
 CHAINS = None
 CORES = 6
+
+META_KEYS = ['title', 'units', 'units_tex', 'label', 'label_tex']
 
 META = {
 	'x': {
@@ -52,7 +56,27 @@ META = {
 	'model': {
 		'.dims': ['model'],
 		'long_name': 'model name',
-	}
+	},
+	'title': {
+		'.dims': ['constraint'],
+		'long_name': 'constraint title',
+	},
+	'units': {
+		'.dims': ['constraint'],
+		'long_name': 'constraint x-axis units',
+	},
+	'units_tex': {
+		'.dims': ['constraint'],
+		'long_name': 'constraint x-axis units in TeX format',
+	},
+	'label': {
+		'.dims': ['constraint'],
+		'long_name': 'constraint x-axis label',
+	},
+	'label_tex': {
+		'.dims': ['constraint'],
+		'long_name': 'constraint x-axis label in TeX format',
+	},
 }
 
 import sys
@@ -64,10 +88,14 @@ import ds_format as ds
 def read(dirname):
 	filename = os.path.join(dirname, 'data.csv')
 	filename_obs = os.path.join(dirname, 'obs.csv')
+	filename_meta = os.path.join(dirname, 'meta.csv')
 	d = ds.read(filename)
 	d_obs = ds.read(filename_obs)
+	d_meta = ds.read(filename_meta)
 	d['xo'] = d_obs['x'][0]
 	d['xosd'] = d_obs['xsd'][0]
+	for var in ds.vars(d_meta):
+		ds.attr(d, var, d_meta[var][0])
 	return d
 
 def normalize(x, xsd, xo, xosd, y):
@@ -176,7 +204,7 @@ if __name__ == '__main__':
 		for i in range(n):
 			yxpu[:,:,(1+i)] = yxpu[:,:,(1+i)]*xs[i] + xm[i]
 
-	ds.write(output, {
+	do = {
 		'x': x,
 		'y': y,
 		'yxpu': yxpu,
@@ -185,4 +213,7 @@ if __name__ == '__main__':
 		'xosd': xosd,
 		'model': model,
 		'.': META,
-	})
+	}
+	for key in META_KEYS:
+		do[key] = [ds.attr(d, key) for d in dd]
+	ds.write(output, do)

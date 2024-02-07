@@ -95,7 +95,9 @@ def read(dirname):
 	d['xo'] = d_obs['x'][0]
 	d['xosd'] = d_obs['xsd'][0]
 	for var in ds.vars(d_meta):
-		ds.attr(d, var, d_meta[var][0])
+		value = d_meta[var][0]
+		if value is not np.ma.masked:
+			ds.attr(d, var, value)
 	return d
 
 def normalize(x, xsd, xo, xosd, y):

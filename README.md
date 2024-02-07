@@ -10,9 +10,11 @@
     ```sh
     pip3 install numpy matplotlib pymc ds-format pst-format
     ```
-- parallel (optional)
+- GNU parallel (optional)
 
 ## Commands
+
+The commands are to be run from the command line.
 
 ### bin/model
 

@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+'''Process Schlund et al. (2020) emergent constraint (EC) input data.
+
+Usage: process_schlund_ecs DATA OBS META OUTPUT
+
+Arguments:
+
+  DATA    Input file with data for all ECs (CSV).
+  OBS     Input file with observation constraints or all ECs (CSV).
+  META    Input file with metadata (CSV).
+  OUTPUT  Output directory. In the output directory, a new directory for each EC is created.
+
+Examples:
+
+  Process input data in input/schlund2020/cmip{5,6,5+6}.
+
+  bin/process_schlund_ecs input/schlund2020/cmip5.csv input/schlund2020/{obs,meta}.csv input/schlund2020/cmip5/
+  bin/process_schlund_ecs input/schlund2020/cmip6.csv input/schlund2020/{obs,meta}.csv input/schlund2020/cmip6/
+  bin/process_schlund_ecs input/schlund2020/cmip5+6.csv input/schlund2020/{obs,meta}.csv input/schlund2020/cmip5+6/
+'''
+
+import sys
+import os
+import numpy as np
+import ds_format as ds
+
+if __name__ == '__main__':
+	if len(sys.argv) != 5:
+		sys.stderr.write(sys.modules[__name__].__doc__)
+		sys.exit(1)
+	data = sys.argv[1]
+	obs = sys.argv[2]
+	meta = sys.argv[3]
+	output = sys.argv[4]
+
+	d = ds.read(data)
+	d_obs = ds.read(obs)
+	d_meta = ds.read(meta)
+	n = ds.dim(d, 'i')
+
+	for ec in ds.vars(d):
+		if ec in ['cmip', 'model', 'ecs']:
+			continue
+		dirname = os.path.join(output, ec)
+		try: os.mkdir(dirname)
+		except FileExistsError as e: pass
+		filename = os.path.join(dirname, 'data.csv')
+		ds.write(filename, {
+			'cmip': d['cmip'],
+			'model': d['model'],
+			'x': ds.var(d, ec),
+			'y': d['ecs'],
+		})
+		filename = os.path.join(dirname, 'obs.csv')
+		i = list(d_obs['name']).index(ec)
+		ds.write(filename, {
+			#'x1': [d_obs['x1'][i]],
+			#'x2': [d_obs['x2'][i]],
+			'x': [0.5*(d_obs['x1'][i] + d_obs['x2'][i])],
+			'xsd': [0.5*(d_obs['x2'][i] - d_obs['x1'][i])],
+		})
+		filename = os.path.join(dirname, 'meta.csv')
+		i = list(d_meta['name']).index(ec)
+		ds.write(filename, {
+			'title': [d_meta['title'][i]],
+			'label': [d_meta['label'][i]],
+			'label_tex': [d_meta['label_tex'][i]],
+			'units': [d_meta['units'][i]],
+			'units_tex': [d_meta['units_tex'][i]],
+		})

@@ -28,15 +28,15 @@ XPDF_SIZE = 0.15
 
 def get_label(d, i):
 	label = d['label_tex'][i]
-	if label == '':
+	if label == '' or label is np.ma.masked:
 		label = d['label'][i]
 	else:
-		label = '$%s$' % label
+		label = '$%s$' % label.replace('%', '\\%')
 	units = d['units_tex'][i]
-	if units == '':
+	if units == '' or units is np.ma.masked:
 		units = d['units'][i]
 	else:
-		units = '$%s$' % units
+		units = '$%s$' % units.replace('%', '\\%')
 	if units not in ['1', '']:
 		label += ' (%s)' % units
 	return label
@@ -53,6 +53,7 @@ if __name__ == '__main__':
 	n = ds.dim(d, 'constraint')
 
 	fig = plt.figure(figsize=(10.7, 10))
+	#fig = plt.figure(figsize=(30, 30))
 
 	y_mean = np.mean(d['y'])
 	y_min = np.floor(np.amin(d['y']))

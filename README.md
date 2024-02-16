@@ -82,6 +82,29 @@ Examples:
   bin/plot_scatter data/multivar.nc plot/scatter.pdf
 ```
 
+### bin/process\_schlund\_ec
+
+```
+Process Schlund et al. (2020) emergent constraint (EC) input data.
+
+Usage: process_schlund_ec DATA OBS META OUTPUT
+
+Arguments:
+
+  DATA    Input file with data for all ECs (CSV).
+  OBS     Input file with observation constraints or all ECs (CSV).
+  META    Input file with metadata (CSV).
+  OUTPUT  Output directory. In the output directory, a new directory for each EC is created.
+
+Examples:
+
+  Process input data in input/schlund2020/cmip{5,6,5+6}.
+
+  bin/process_schlund_ec input/schlund2020/cmip5.csv input/schlund2020/{obs,meta}.csv input/schlund2020/cmip5/
+  bin/process_schlund_ec input/schlund2020/cmip6.csv input/schlund2020/{obs,meta}.csv input/schlund2020/cmip6/
+  bin/process_schlund_ec input/schlund2020/cmip5+6.csv input/schlund2020/{obs,meta}.csv input/schlund2020/cmip5+6/
+```
+
 ## Input data
 
 The input data are stored in `input`. These include the model EC x-axis values, ECS, observations x-axis value and standard deviation and EC metadata (title, x-axis label and units). The input data are split into the following groups:

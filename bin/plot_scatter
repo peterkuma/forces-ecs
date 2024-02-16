@@ -28,16 +28,16 @@ XPDF_SIZE = 0.15
 
 def get_label(d, i):
 	label = d['label_tex'][i]
-	if label == '' or label is np.ma.masked:
+	if label is np.ma.masked:
 		label = d['label'][i]
 	else:
 		label = '$%s$' % label.replace('%', '\\%')
 	units = d['units_tex'][i]
-	if units == '' or units is np.ma.masked:
+	if units is np.ma.masked:
 		units = d['units'][i]
 	else:
 		units = '$%s$' % units.replace('%', '\\%')
-	if units not in ['1', '']:
+	if units != 1 and units is not np.ma.masked:
 		label += ' (%s)' % units
 	return label
 

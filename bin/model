@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 '''Run a PyMC model for multivariate emergent constraint (EC) calculation.
 
-Usage: model INPUT... OUTPUT
+Usage: model [OPTIONS] INPUT... OUTPUT
 
 Arguments:
 
   INPUT   Input directory with data.csv and obs.csv for an EC.
   OUTPUT  Output file (NetCDF).
+
+Options:
+
+  --with_model_xsd   Take into account x-axis standard deviation of models.
+  --with_switch      Enable switching ECs on or off during the simulation using a categorical variable.
+  --exclude_missing  Exclude models with missing x-axis values.
+  nsamples: VALUE    Number of simulation samples. Default: 1000.
+  ntune: VALUE       Number of tuning samples. Default: 1000.
+  ncores: VALUE      Number of CPU cores to use. Default: 6.
+  nchains: VALUE     Number of chains to use or none for automatic. Default: none.
 
 Examples:
 
@@ -19,14 +29,7 @@ Examples:
   parallel bin/model {} data/univar/{/}.nc ::: input/*
 '''
 
-NSAMPLES = 1000
-TUNE = 1000
-#NSAMPLES = 100
-#TUNE = 100
-#NSAMPLES = 10
-#TUNE = 10
 CHAINS = None
-CORES = 6
 
 META_KEYS = ['title', 'units', 'units_tex', 'label', 'label_tex']
 
@@ -86,6 +89,7 @@ import os
 import numpy as np
 import pymc as pm
 import ds_format as ds
+import pst
 
 def read(dirname):
 	filename = os.path.join(dirname, 'data.csv')
@@ -102,6 +106,10 @@ def read(dirname):
 			ds.attr(d, var, value)
 	return d
 
+def do_exclude_missing(model, x, xsd, y):
+	mask = np.any(np.isnan(x), axis=0)
+	return model[~mask], x[:,~mask], xsd[:,~mask], y[~mask]
+
 def normalize(x, xsd, xo, xosd, y):
 	xm = np.nanmean(x, axis=1)
 	xs = np.nanstd(x, axis=1)
@@ -117,24 +125,28 @@ def normalize(x, xsd, xo, xosd, y):
 	yn = (y - ym)/ys
 	return xn, xnsd, xno, xnosd, yn, xm, xs, ym, ys
 
-def create_pm_model(x, xsd, xo, xosd, y, pred=False):
+def create_pm_model(x, xsd, xo, xosd, y,
+	pred=False,
+	with_model_xsd=False,
+	with_switch=False,
+):
 	n, m = x.shape # n: number of constraints, m: number of models.
 	n2 = n + 1
 	mod = pm.Model()
 	data = np.vstack([y, x]).T
 	mu0 = np.zeros(n2)
-	with_xsd = np.any(xsd > 0)
-	with_xsd = False
+	with_model_xsd = with_model_xsd and np.any(xsd > 0)
 	cov_xsd = np.zeros((m, n2, n2), np.float64)
 	for i in range(m):
 		for j in range(n):
 			if xsd[j,i] is not np.ma.masked and np.isfinite(xsd[j,i]):
 				cov_xsd[i,j+1,j+1] = xsd[j,i]**2
-	cov_switch_single = np.zeros((n2, n2, n), np.float64)
-	for i in range(n):
-		cov_switch_single[i+1,:,i] = 1
-		cov_switch_single[:,i+1,i] = 1
-	cov_switch_diag = np.identity(n2)
+	if with_switch:
+		cov_switch_single = np.zeros((n2, n2, n), np.float64)
+		for i in range(n):
+			cov_switch_single[i+1,:,i] = 1
+			cov_switch_single[:,i+1,i] = 1
+		cov_switch_diag = np.identity(n2)
 	with mod:
 		mu = pm.Uniform('mu', lower=-10, upper=10, shape=(n2,), initval=mu0)
 		chol, corr, std = pm.LKJCholeskyCov('packed_L',
@@ -143,13 +155,16 @@ def create_pm_model(x, xsd, xo, xosd, y, pred=False):
 			sd_dist=pm.Exponential.dist(1.)
 		)
 		cov_plain = pm.Deterministic('cov_plain', pm.math.dot(chol, chol.T))
-		ec_switch = pm.Categorical('ec_switch', p=[0.5, 0.5], shape=n)
-		cov_switch = pm.Deterministic('cov_switch',
-			(cov_switch_diag + pm.math.dot(cov_switch_single, ec_switch)) > 0
-		)
-		cov = pm.Deterministic('cov', cov_plain*cov_switch)
+		if with_switch:
+			ec_switch = pm.Categorical('ec_switch', p=[0.5, 0.5], shape=n)
+			cov_switch = pm.Deterministic('cov_switch',
+				(cov_switch_diag + pm.math.dot(cov_switch_single, ec_switch)) > 0
+			)
+			cov = pm.Deterministic('cov', cov_plain*cov_switch)
+		else:
+			cov = pm.Deterministic('cov', cov_plain)
 		if pred is False:
-			if with_xsd:
+			if with_model_xsd:
 				for i in range(m):
 					cov_i = pm.Deterministic('cov_%d' % i, cov + cov_xsd[i,:,:])
 					yx = pm.MvNormal('yx_%d' % i,
@@ -182,11 +197,23 @@ def create_pm_model(x, xsd, xo, xosd, y, pred=False):
 	return mod
 
 if __name__ == '__main__':
-	if len(sys.argv) < 2:
+	args, opts = pst.decode_argv(sys.argv, as_unicode=True)
+	if len(args) < 2:
 		sys.stderr.write(sys.modules[__name__].__doc__)
 		sys.exit(1)
-	input_ = sys.argv[1:-1]
-	output = sys.argv[-1]
+	input_ = args[1:-1]
+	output = args[-1]
+
+	nsamples = opts.get('nsamples', 1000)
+	exclude_missing = opts.get('exclude_missing', False)
+	ntune = opts.get('ntune', 1000)
+	ncores = opts.get('ncores', 6)
+	nchains = opts.get('nchains', None)
+
+	create_pm_model_opts = {k: opts[k] for k in [
+		'with_model_xsd',
+		'with_switch',
+	] if k in opts}
 
 	dd = [read(dirname) for dirname in input_]
 
@@ -214,13 +241,23 @@ if __name__ == '__main__':
 		y[i, jj] = d['y']
 	y = np.round(np.nanmean(y, axis=0), 2)
 
+	if exclude_missing:
+		model, x, xsd, y = do_exclude_missing(model, x, xsd, y)
+		m = len(model)
+
+	if m == 0:
+		raise ValueError('no eligible models in the input data')
+
 	xn, xnsd, xno, xnosd, yn, xm, xs, ym, ys = normalize(x, xsd, xo, xosd, y)
 
-	pm_mod = create_pm_model(xn, xnsd, xno, xnosd, yn)
-	pm_mod_pred = create_pm_model(xn, xnsd, xno, xnosd, yn, pred=True)
+	pm_mod = create_pm_model(xn, xnsd, xno, xnosd, yn, **create_pm_model_opts)
+	pm_mod_pred = create_pm_model(xn, xnsd, xno, xnosd, yn,
+		pred=True,
+		**create_pm_model_opts,
+	)
 
 	with pm_mod:
-		trace = pm.sample(NSAMPLES, tune=TUNE, chains=CHAINS, cores=CORES)
+		trace = pm.sample(nsamples, tune=ntune, chains=nchains, cores=ncores)
 
 	with pm_mod_pred:
 		pp = pm.sample_posterior_predictive(trace,

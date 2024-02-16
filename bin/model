@@ -21,6 +21,8 @@ Examples:
 
 NSAMPLES = 1000
 TUNE = 1000
+#NSAMPLES = 100
+#TUNE = 100
 #NSAMPLES = 10
 #TUNE = 10
 CHAINS = None
@@ -116,11 +118,23 @@ def normalize(x, xsd, xo, xosd, y):
 	return xn, xnsd, xno, xnosd, yn, xm, xs, ym, ys
 
 def create_pm_model(x, xsd, xo, xosd, y, pred=False):
-	n, m = x.shape
+	n, m = x.shape # n: number of constraints, m: number of models.
 	n2 = n + 1
 	mod = pm.Model()
 	data = np.vstack([y, x]).T
 	mu0 = np.zeros(n2)
+	with_xsd = np.any(xsd > 0)
+	with_xsd = False
+	cov_xsd = np.zeros((m, n2, n2), np.float64)
+	for i in range(m):
+		for j in range(n):
+			if xsd[j,i] is not np.ma.masked and np.isfinite(xsd[j,i]):
+				cov_xsd[i,j+1,j+1] = xsd[j,i]**2
+	cov_switch_single = np.zeros((n2, n2, n), np.float64)
+	for i in range(n):
+		cov_switch_single[i+1,:,i] = 1
+		cov_switch_single[:,i+1,i] = 1
+	cov_switch_diag = np.identity(n2)
 	with mod:
 		mu = pm.Uniform('mu', lower=-10, upper=10, shape=(n2,), initval=mu0)
 		chol, corr, std = pm.LKJCholeskyCov('packed_L',
@@ -128,19 +142,33 @@ def create_pm_model(x, xsd, xo, xosd, y, pred=False):
 			eta=2.,
 			sd_dist=pm.Exponential.dist(1.)
 		)
+		cov_plain = pm.Deterministic('cov_plain', pm.math.dot(chol, chol.T))
+		ec_switch = pm.Categorical('ec_switch', p=[0.5, 0.5], shape=n)
+		cov_switch = pm.Deterministic('cov_switch',
+			(cov_switch_diag + pm.math.dot(cov_switch_single, ec_switch)) > 0
+		)
+		cov = pm.Deterministic('cov', cov_plain*cov_switch)
 		if pred is False:
-			yx = pm.MvNormal('yx',
-				mu=mu,
-				chol=chol,
-				observed=data,
-			)
+			if with_xsd:
+				for i in range(m):
+					cov_i = pm.Deterministic('cov_%d' % i, cov + cov_xsd[i,:,:])
+					yx = pm.MvNormal('yx_%d' % i,
+						mu=mu,
+						cov=cov_i,
+						observed=data[i,:],
+					)
+			else:
+				yx = pm.MvNormal('yx',
+					mu=mu,
+					cov=cov,
+					observed=data,
+				)
 		else:
 			xo = pm.Normal('xo', mu=xo, sigma=xosd)
 			yx = pm.MvNormal('yx',
 				mu=mu,
-				chol=chol,
+				cov=cov,
 			)
-			cov = pm.Deterministic('cov', pm.math.dot(chol, chol.T))
 			cov12 = pm.Deterministic('cov12', cov[0,1:])
 			cov22 = pm.Deterministic('cov22', cov[1:,1:])
 			cov21 = pm.Deterministic('cov21', cov[1:,0])

@@ -1,0 +1,12 @@
+name,title,label,label_tex,units,units_tex
+brient2016c,Brient and Schneider (2016) II,Response of SW cloud reflectivity to SST changes,,% K-1,% K^{-1}
+cox2018,Cox et al. (2018),𝜓,,K,
+lipat2017,Lipat et al. (2017),SH Hadley cell extent,,°,
+sherwood2014_D,Sherwood et al. (2014) D,D,,1,
+sherwood2014,Sherwood et al. (2014),LTMI,,1,
+sherwood2014_S,Sherwood et al. (2014) S,S,,1,
+su2014,Su et al. (2014),Model perf. in RH,,1,
+tian2015,Tian (2015),Tropical mid-tropo. humidity,,%,
+tian2015_ITCZ,Tian (2015) ITCZ,Southern ITCZ index,,mm d-1,mm d^{-1}
+volodin2008,Volodin (2018),Diff. in tropical and midlat. CF,,%,
+zhai2015,Zhai et al. (2015),Response of MBLC frac. to SST changes,,% K-1,% K^{-1},

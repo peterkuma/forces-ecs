@@ -111,7 +111,7 @@ The input data are stored in `input`. These include the model EC x-axis values, 
 
 - `bretherton2020`: The credible and other ECs analysed by BC2020.
 - `forces`: FORCeS ECs.
-- `merged`: BC2020 and Schlund et al. (2020) [S2020] ECs together. The same ECs from BC2020 and S2020 are merged together, so that they contain all of the CMIP3, CMIP5 and CMIP6 models available.
+- `merged`: BC2020 and [Schlund et al. (2020)](https://doi.org/10.5194/esd-11-1233-2020) [S2020] ECs together. The same ECs from BC2020 and S2020 are merged together, so that they contain all of the CMIP3, CMIP5 and CMIP6 models available.
 - `schlund2020`: ECs from S2020 separately for CMIP5, CMIP6 and CMIP5+6 models. Subdirectories ending in `_sel` contain the same models as the related directory without `_sel`, but excluding the `sherwood2014_D` and `sherwood2014_S` ECs because they cause a convergence issue in the simulation when all three sherwood2014 ECs are included.
 
 ## License

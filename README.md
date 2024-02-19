@@ -8,7 +8,7 @@
 - Python packages:
 
     ```sh
-    pip3 install numpy matplotlib pymc ds-format pst-format
+    pip3 install numpy scipy matplotlib pymc ds-format pst-format
     ```
 - GNU parallel (optional)
 

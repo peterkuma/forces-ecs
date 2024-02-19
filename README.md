@@ -1,6 +1,6 @@
 # FORCeS ECS
 
-*Combining emergent constraints produced by the FORCeS project using the Bretherton and Caldwell (2020) [BC2020] method.*
+*Combining emergent constraints produced by the FORCeS project using the [Bretherton and Caldwell (2020)](https://doi.org/10.1175/JCLI-D-19-0911.1) [BC2020] method.*
 
 ## Requirements
 

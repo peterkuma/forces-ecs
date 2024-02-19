@@ -22,11 +22,11 @@ Examples:
 
   Read all constraints in the directory input and write the output to data/all.nc.
 
-  bin/model input/* data/multivar.nc
+  bin/model input/merged/* data/multivar/merged.nc
 
   Calculate univariate distributions.
 
-  parallel bin/model {} data/univar/{/}.nc ::: input/*
+  parallel bin/model {} data/merged/{/}.nc ::: input/merged/*
 '''
 
 CHAINS = None

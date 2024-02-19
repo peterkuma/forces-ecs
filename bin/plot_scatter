@@ -12,7 +12,7 @@ Examples:
 
   Plot scatter plots of the multivariate simulation.
 
-  bin/plot_scatter data/multivar.nc plot/scatter.pdf
+  bin/plot_scatter data/multivar/merged.nc plot/scatter/merged.pdf
 '''
 
 import sys
@@ -28,16 +28,16 @@ XPDF_SIZE = 0.15
 
 def get_label(d, i):
 	label = d['label_tex'][i]
-	if label is np.ma.masked:
+	if label == '' or label is np.ma.masked:
 		label = d['label'][i]
 	else:
-		label = '$%s$' % label.replace('%', '\\%')
+		label = '$%s$' % label
 	units = d['units_tex'][i]
-	if units is np.ma.masked:
+	if units == '' or units is np.ma.masked:
 		units = d['units'][i]
 	else:
-		units = '$%s$' % units.replace('%', '\\%')
-	if units != 1 and units is not np.ma.masked:
+		units = '$%s$' % units
+	if units != 1 and units is not np.ma.masked and units != '':
 		label += ' (%s)' % units
 	return label
 
@@ -133,11 +133,13 @@ if __name__ == '__main__':
 				linewidths=0.5,
 			)
 
+			label_i = get_label(d, i)
+			label_j = get_label(d, j)
 			if i == j:
 				plt.ylabel('ECS (K)')
 			else:
-				plt.ylabel(get_label(d, i))
-			plt.xlabel(get_label(d, j))
+				plt.ylabel(label_i)
+			plt.xlabel(label_j)
 
 	cax = fig.add_axes([0.12, .1, 0.34, 0.02])
 	norm = mpl.colors.BoundaryNorm(np.arange(y_min, y_max + .25, .25), cmap.N)

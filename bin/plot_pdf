@@ -15,9 +15,9 @@ Options:
 
 Examples:
 
-  Plot probability density functions of all ECs.
+  Plot probability density functions of all ECs in merged.
 
-  bin/plot_pdf data/multivar.nc data/univar/*.nc plot/pdfs.pdf
+  bin/plot_pdf data/multivar/merged.nc data/merged/*.nc plot/pdf/merged.pdf
 '''
 
 import sys
@@ -30,8 +30,8 @@ from matplotlib.lines import Line2D
 import pst
 import ds_format as ds
 
-COLORS = ['#000000', '#f70000', '#00ca12', '#f5de00', '#0096fd', '#b66b00', '#ff00ef', '#ff7b0b', '#9800f1', '#a3a3a3', '#b10000', '#1b8000', '#bb9f00', '#1700a6', '#6d3600']
-MARKERS = ['o', 's', '*', '^', '<', '>', 'v', 'x', '+', 'D', 'p', 'h', 'd', 'X', 'P']
+COLORS = ['#000000', '#f70000', '#00ca12', '#f5de00', '#0096fd', '#b66b00', '#ff00ef', '#ff7b0b', '#9800f1', '#a3a3a3', '#b10000', '#1b8000', '#bb9f00', '#1700a6', '#6d3600', '#a6009f', '#b24700', '#630099', '#4e4e4e']
+MARKERS = ['o', 's', '*', '^', '<', '>', 'v', 'x', '+', 'D', 'p', 'h', 'd', 'X', 'P', 'H', '$\\alpha$', '$\\beta$', '$\\gamma$']
 
 mpl.rc('font', family='Open Sans', size=8)
 mpl.rc('axes', linewidth=0.3)
@@ -43,7 +43,7 @@ mpl.rc('legend', framealpha=1)
 mpl.rc('legend', facecolor='#eeeeee')
 mpl.rc('legend', edgecolor='none')
 mpl.rc('legend', fancybox=False)
-mpl.rc('legend', fontsize=6)
+mpl.rc('legend', fontsize=5.4)
 mpl.rc('grid', color='k')
 mpl.rc('grid', alpha=0.2)
 mpl.rc('grid', lw=0.1)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 	input_ = args[1:-1]
 	output = args[-1]
 
-	xlim = opts.get('xlim', [1, 8])
+	xlim = opts.get('xlim', [1, 9])
 	ylim = opts.get('ylim', [0, 1])
 
 	plt.figure(figsize=(6, 3))

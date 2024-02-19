@@ -32,11 +32,11 @@ Examples:
 
   Read all constraints in the directory input and write the output to data/all.nc.
 
-  bin/model input/* data/multivar.nc
+  bin/model input/merged/* data/multivar/merged.nc
 
   Calculate univariate distributions.
 
-  parallel bin/model {} data/univar/{/}.nc ::: input/*
+  parallel bin/model {} data/merged/{/}.nc ::: input/merged/*
 ```
 
 ### bin/plot\_pdf
@@ -58,9 +58,9 @@ Options:
 
 Examples:
 
-  Plot probability density functions of all ECs.
+  Plot probability density functions of all ECs in merged.
 
-  bin/plot_pdf data/multivar.nc data/univar/*.nc plot/pdfs.pdf
+  bin/plot_pdf data/multivar/merged.nc data/merged/*.nc plot/pdf/merged.pdf
 ```
 
 ### bin/plot\_scatter
@@ -79,7 +79,7 @@ Examples:
 
   Plot scatter plots of the multivariate simulation.
 
-  bin/plot_scatter data/multivar.nc plot/scatter.pdf
+  bin/plot_scatter data/multivar/merged.nc plot/scatter/merged.pdf
 ```
 
 ### bin/process\_schlund\_ec
